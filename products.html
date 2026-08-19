@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Products | ZHA BILL Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<script src="../data.js"></script>
+<script src="admin.js"></script>
+<script>
+const content = renderAdminShell('products.html', 'Products / Services');
+
+content.innerHTML = `
+  <div class="admin-card">
+    <div class="toolbar">
+      <input type="text" id="search" placeholder="🔍 Search by name or barcode...">
+      <button class="btn btn-primary" id="addBtn" style="margin-left:auto">➕ Add Product</button>
+    </div>
+    <table>
+      <thead><tr><th>Name</th><th>Sell ₹</th><th>Buy ₹</th><th>Stock</th><th>Status</th><th>Barcode</th><th></th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty" id="emptyMsg" style="display:none">No products yet. Add your first product.</div>
+  </div>
+`;
+
+function render(){
+  const q = (document.getElementById('search').value||'').toLowerCase();
+  const list = ZB.getProducts().filter(p=>p.name.toLowerCase().includes(q) || (p.barcode||'').includes(q));
+  document.getElementById('tbody').innerHTML = list.map(p=>`
+    <tr>
+      <td>${p.name}</td>
+      <td class="amt">₹${p.sellPrice}</td>
+      <td class="amt">₹${p.buyPrice}</td>
+      <td>${p.stockQty}</td>
+      <td>${p.stockQty<=p.lowStockAlert ? '<span class="badge low">Low stock</span>' : '<span class="badge ok">OK</span>'}</td>
+      <td class="muted">${p.barcode||'-'}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-outline" style="padding:5px 10px" onclick="openForm('${p.id}')">✎ Edit</button>
+        <button class="btn btn-danger" style="padding:5px 10px" onclick="remove('${p.id}')">🗑</button>
+      </td>
+    </tr>`).join('');
+  document.getElementById('emptyMsg').style.display = list.length ? 'none' : 'block';
+}
+
+function remove(id){
+  const p = ZB.getProducts().find(x=>x.id===id);
+  if(!p) return;
+  if(confirmDelete(p.name)){ ZB.deleteProduct(id); render(); toast('Product deleted'); }
+}
+
+function openForm(id){
+  const editing = id ? ZB.getProducts().find(x=>x.id===id) : null;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop show';
+  backdrop.innerHTML = `
+    <div class="modal">
+      <h3>${editing ? 'Edit Product' : 'Add Product'}</h3>
+      <label>Name</label><input type="text" id="f_name" value="${editing?editing.name:''}">
+      <div class="row2">
+        <div><label>Selling price (₹)</label><input type="number" id="f_sell" value="${editing?editing.sellPrice:''}"></div>
+        <div><label>Buying price (₹)</label><input type="number" id="f_buy" value="${editing?editing.buyPrice:''}"></div>
+      </div>
+      <div class="row2">
+        <div><label>Stock qty</label><input type="number" id="f_qty" value="${editing?editing.stockQty:0}"></div>
+        <div><label>Low stock alert</label><input type="number" id="f_low" value="${editing?editing.lowStockAlert:5}"></div>
+      </div>
+      <label>Barcode (optional)</label><input type="text" id="f_barcode" value="${editing?editing.barcode:''}">
+      <div class="modal-actions">
+        <button class="btn btn-outline" id="f_cancel">Cancel</button>
+        <button class="btn btn-primary" id="f_save">${editing?'Save changes':'Add product'}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector('#f_cancel').onclick = ()=>backdrop.remove();
+  backdrop.querySelector('#f_save').onclick = ()=>{
+    const name = document.getElementById('f_name').value.trim();
+    if(!name) return alert('Name is required');
+    const data = {
+      name,
+      sellPrice: document.getElementById('f_sell').value,
+      buyPrice: document.getElementById('f_buy').value,
+      stockQty: document.getElementById('f_qty').value,
+      lowStockAlert: document.getElementById('f_low').value,
+      barcode: document.getElementById('f_barcode').value
+    };
+    if(editing) { ZB.updateProduct(editing.id, data); toast('Product updated'); }
+    else { ZB.addProduct(data); toast('Product added'); }
+    backdrop.remove();
+    render();
+  };
+}
+
+document.getElementById('search').addEventListener('input', render);
+document.getElementById('addBtn').addEventListener('click', ()=>openForm(null));
+render();
+</script>
+</body>
+</html>

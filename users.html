@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Users | ZHA BILL Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<script src="../data.js"></script>
+<script src="admin.js"></script>
+<script>
+const content = renderAdminShell('users.html', 'Users (Customers)');
+
+content.innerHTML = `
+  <p class="muted" style="margin-top:-6px">This app doesn't have staff logins — "Users" here are the shop's customers, captured automatically at billing time or added manually.</p>
+  <div class="admin-card">
+    <div class="toolbar">
+      <input type="text" id="search" placeholder="🔍 Search by name / phone...">
+      <button class="btn btn-primary" id="addBtn" style="margin-left:auto">➕ Add Customer</button>
+    </div>
+    <table>
+      <thead><tr><th>Name</th><th>Phone</th><th>Orders</th><th></th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty" id="emptyMsg" style="display:none">No customers yet.</div>
+  </div>
+`;
+
+function render(){
+  const q = (document.getElementById('search').value||'').toLowerCase();
+  const bills = ZB.getBills();
+  const list = ZB.getCustomers().filter(c=>c.name.toLowerCase().includes(q) || (c.phone||'').includes(q));
+  document.getElementById('tbody').innerHTML = list.map(c=>{
+    const count = bills.filter(b=>b.customerPhone && b.customerPhone===c.phone).length;
+    return `<tr>
+      <td>${c.name||'-'}</td><td>${c.phone||'-'}</td><td>${count}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-outline" style="padding:5px 10px" onclick="openForm('${c.id}')">✎ Edit</button>
+        <button class="btn btn-danger" style="padding:5px 10px" onclick="remove('${c.id}')">🗑</button>
+      </td></tr>`;
+  }).join('');
+  document.getElementById('emptyMsg').style.display = list.length ? 'none' : 'block';
+}
+
+function remove(id){
+  const c = ZB.getCustomers().find(x=>x.id===id);
+  if(!c) return;
+  if(confirmDelete(c.name||'this customer')){ ZB.deleteCustomer(id); render(); toast('Customer deleted'); }
+}
+
+function openForm(id){
+  const editing = id ? ZB.getCustomers().find(x=>x.id===id) : null;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop show';
+  backdrop.innerHTML = `
+    <div class="modal">
+      <h3>${editing ? 'Edit Customer' : 'Add Customer'}</h3>
+      <label>Name</label><input type="text" id="f_name" value="${editing?editing.name:''}">
+      <label>Phone</label><input type="tel" id="f_phone" value="${editing?editing.phone:''}">
+      <div class="modal-actions">
+        <button class="btn btn-outline" id="f_cancel">Cancel</button>
+        <button class="btn btn-primary" id="f_save">${editing?'Save changes':'Add customer'}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector('#f_cancel').onclick = ()=>backdrop.remove();
+  backdrop.querySelector('#f_save').onclick = ()=>{
+    const data = { name: document.getElementById('f_name').value.trim(), phone: document.getElementById('f_phone').value.trim() };
+    if(!data.name) return alert('Name is required');
+    if(editing) { ZB.updateCustomer(editing.id, data); toast('Customer updated'); }
+    else { ZB.addCustomer(data); toast('Customer added'); }
+    backdrop.remove();
+    render();
+  };
+}
+
+document.getElementById('search').addEventListener('input', render);
+document.getElementById('addBtn').addEventListener('click', ()=>openForm(null));
+render();
+</script>
+</body>
+</html>

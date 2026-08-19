@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Messages | ZHA BILL Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<script src="../data.js"></script>
+<script src="admin.js"></script>
+<script>
+const content = renderAdminShell('messages.html', 'Messages');
+
+content.innerHTML = `
+  <p class="muted" style="margin-top:-6px">The public site has no contact form yet, so this is a manual inquiry log — add a note whenever a customer calls or messages you, and mark it handled once resolved.</p>
+  <div class="admin-card">
+    <div class="toolbar">
+      <button class="btn btn-primary" id="addBtn">➕ Log a message</button>
+    </div>
+    <table>
+      <thead><tr><th>From</th><th>Message</th><th>Status</th><th>Date</th><th></th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty" id="emptyMsg" style="display:none">No messages logged yet.</div>
+  </div>
+`;
+
+function render(){
+  const list = ZB.getMessages();
+  document.getElementById('tbody').innerHTML = list.map(m=>`
+    <tr>
+      <td>${m.name||'-'}${m.phone?('<br><span class="muted" style="font-size:11px">'+m.phone+'</span>'):''}</td>
+      <td>${m.text}</td>
+      <td>${m.status==='new' ? '<span class="badge low">New</span>' : '<span class="badge ok">Handled</span>'}</td>
+      <td class="muted" style="font-size:12px">${new Date(m.createdAt).toLocaleDateString('en-IN')}</td>
+      <td style="white-space:nowrap">
+        ${m.status==='new' ? `<button class="btn btn-outline" style="padding:5px 10px" onclick="markHandled('${m.id}')">✓ Handled</button>` : ''}
+        <button class="btn btn-danger" style="padding:5px 10px" onclick="remove('${m.id}')">🗑</button>
+      </td>
+    </tr>`).join('');
+  document.getElementById('emptyMsg').style.display = list.length ? 'none' : 'block';
+}
+
+function markHandled(id){ ZB.updateMessage(id, {status:'handled'}); render(); toast('Marked handled'); }
+function remove(id){ if(confirmDelete('this message')){ ZB.deleteMessage(id); render(); toast('Message deleted'); } }
+
+document.getElementById('addBtn').addEventListener('click', ()=>{
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop show';
+  backdrop.innerHTML = `
+    <div class="modal">
+      <h3>Log a message</h3>
+      <label>Name</label><input type="text" id="f_name">
+      <label>Phone</label><input type="tel" id="f_phone">
+      <label>Message</label><textarea id="f_text" rows="3"></textarea>
+      <div class="modal-actions">
+        <button class="btn btn-outline" id="f_cancel">Cancel</button>
+        <button class="btn btn-primary" id="f_save">Save</button>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector('#f_cancel').onclick = ()=>backdrop.remove();
+  backdrop.querySelector('#f_save').onclick = ()=>{
+    const text = document.getElementById('f_text').value.trim();
+    if(!text) return alert('Message text is required');
+    ZB.addMessage({ name: document.getElementById('f_name').value.trim(), phone: document.getElementById('f_phone').value.trim(), text });
+    backdrop.remove();
+    render();
+    toast('Message logged');
+  };
+});
+
+render();
+</script>
+</body>
+</html>

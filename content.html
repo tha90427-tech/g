@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Website Content | ZHA BILL Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<script src="../data.js"></script>
+<script src="admin.js"></script>
+<script>
+const content = renderAdminShell('content.html', 'Website Content');
+const c = ZB.getContent();
+
+content.innerHTML = `
+  <p class="muted" style="margin-top:-6px">Editing here updates the public site immediately — it reads from the same storage this form writes to.</p>
+  <div class="admin-card" style="max-width:520px">
+    <label>Shop name</label>
+    <input type="text" id="shopName" value="${c.shopName}">
+    <label>Tagline</label>
+    <input type="text" id="tagline" value="${c.tagline}">
+    <div class="row2">
+      <div><label>Contact phone</label><input type="tel" id="contactPhone" value="${c.contactPhone}"></div>
+      <div><label>UPI ID</label><input type="text" id="upiId" value="${c.upiId}"></div>
+    </div>
+    <label>Address</label>
+    <input type="text" id="contactAddress" value="${c.contactAddress}">
+    <label>Footer note</label>
+    <input type="text" id="footerNote" value="${c.footerNote}">
+    <button class="btn btn-primary" id="saveBtn" style="margin-top:16px">💾 Save & publish</button>
+  </div>
+`;
+
+document.getElementById('saveBtn').addEventListener('click', ()=>{
+  ZB.saveContent({
+    shopName: document.getElementById('shopName').value.trim() || 'ழா BILL',
+    tagline: document.getElementById('tagline').value.trim(),
+    contactPhone: document.getElementById('contactPhone').value.trim(),
+    upiId: document.getElementById('upiId').value.trim(),
+    contactAddress: document.getElementById('contactAddress').value.trim(),
+    footerNote: document.getElementById('footerNote').value.trim()
+  });
+  toast('Saved — live on the main site now');
+});
+</script>
+</body>
+</html>

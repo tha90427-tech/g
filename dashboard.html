@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard | ZHA BILL Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<script src="../data.js"></script>
+<script src="admin.js"></script>
+<script>
+const content = renderAdminShell('dashboard.html', 'Dashboard');
+const s = ZB.stats();
+
+content.innerHTML = `
+  <div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">
+    <div class="stat"><div class="v">${money(s.todaySales)}</div><div class="l">Today's sales</div></div>
+    <div class="stat"><div class="v">${s.totalBills}</div><div class="l">Total bills</div></div>
+    <div class="stat"><div class="v">${money(s.allTimeSales)}</div><div class="l">All-time sales</div></div>
+    <div class="stat alert"><div class="v">${s.lowStockCount}</div><div class="l">Low stock items</div></div>
+    <div class="stat"><div class="v">${s.productCount}</div><div class="l">Total products</div></div>
+    <div class="stat"><div class="v">${s.customerCount}</div><div class="l">Total customers</div></div>
+    <div class="stat"><div class="v">${money(s.totalStockValue)}</div><div class="l">Stock value</div></div>
+    <div class="stat profit"><div class="v">${money(s.totalProfit)}</div><div class="l">Total profit</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px" id="chartGrid">
+    <div class="admin-card">
+      <h3 style="margin-top:0">📅 Last 7 days sales</h3>
+      <div id="dayWiseChart"></div>
+    </div>
+    <div class="admin-card">
+      <h3 style="margin-top:0">🏆 Top selling items</h3>
+      <div id="topItemsChart"></div>
+    </div>
+  </div>
+
+  <div class="admin-card">
+    <div class="flex-between">
+      <h3 style="margin:0">⚠️ Low stock alerts</h3>
+      <a href="products.html" class="btn btn-outline" style="padding:6px 12px;font-size:12px">Manage products →</a>
+    </div>
+    <table style="margin-top:10px">
+      <thead><tr><th>Item</th><th>Stock</th><th>Alert level</th></tr></thead>
+      <tbody id="lowStockBody"></tbody>
+    </table>
+    <div class="empty" id="lowStockEmpty" style="display:none">No low stock items 🎉</div>
+  </div>
+`;
+
+// day-wise bar chart
+const dw = ZB.dayWiseSales(7);
+const dwMax = Math.max(1, ...dw.map(d=>d.total));
+document.getElementById('dayWiseChart').innerHTML = `<div style="display:flex;align-items:flex-end;gap:8px;height:120px">
+  ${dw.map(d=>`<div style="flex:1;text-align:center"><div style="background:var(--indigo);height:${Math.max(4,d.total/dwMax*90)}px;border-radius:3px 3px 0 0" title="${money(d.total)}"></div><div style="font-size:10px;margin-top:4px" class="muted">${d.label}</div></div>`).join('')}
+</div>`;
+
+// top items chart
+const top = ZB.topSellingItems(5);
+const topMax = Math.max(1, ...top.map(t=>t[1]));
+document.getElementById('topItemsChart').innerHTML = top.length ? top.map(([name,qty])=>`
+  <div style="margin-bottom:8px"><div class="flex-between" style="font-size:12px"><span>${name}</span><span>${qty}</span></div>
+  <div style="background:var(--line);border-radius:4px;height:8px"><div style="width:${(qty/topMax*100).toFixed(0)}%;background:var(--green);height:8px;border-radius:4px"></div></div></div>`).join('')
+  : '<div class="empty">No sales yet</div>';
+
+// low stock table
+document.getElementById('lowStockBody').innerHTML = s.lowStock.map(p=>`
+  <tr class="low"><td>${p.name}</td><td>${p.stockQty}</td><td>${p.lowStockAlert}</td></tr>`).join('');
+document.getElementById('lowStockEmpty').style.display = s.lowStock.length ? 'none' : 'block';
+</script>
+</body>
+</html>

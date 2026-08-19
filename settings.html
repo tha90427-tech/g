@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings | ZHA BILL Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<script src="../data.js"></script>
+<script src="admin.js"></script>
+<script>
+const content = renderAdminShell('settings.html', 'Settings');
+const admin = ZB._get(ZB_KEYS.admin, {});
+
+content.innerHTML = `
+  <div class="admin-card" style="max-width:480px">
+    <h3 style="margin-top:0">Admin account</h3>
+    <label>Email</label>
+    <input type="email" id="email" value="${admin.email||''}">
+    <label>New password <span class="muted">(leave blank to keep current)</span></label>
+    <input type="password" id="newPass" placeholder="••••••••">
+    <label>Confirm current password to save changes</label>
+    <input type="password" id="currentPass" placeholder="Current password">
+    <div id="settingsError" class="login-error"></div>
+    <button class="btn btn-primary" id="saveBtn" style="margin-top:12px">💾 Save changes</button>
+  </div>
+
+  <div class="admin-card" style="max-width:480px">
+    <h3 style="margin-top:0">Session</h3>
+    <p class="muted">Sessions last 4 hours. Logging out ends it immediately on this device.</p>
+    <button class="btn btn-outline" id="logoutBtn">🚪 Log out now</button>
+  </div>
+
+  <div class="admin-card" style="max-width:480px;border-color:#F0C9BE">
+    <h3 style="margin-top:0;color:var(--rust)">Danger zone</h3>
+    <p class="muted">Erase all products, customers and orders. This cannot be undone — download a backup from the public site's Summary tab first.</p>
+    <button class="btn btn-danger" id="wipeBtn">🗑 Erase all shop data</button>
+  </div>
+`;
+
+document.getElementById('saveBtn').addEventListener('click', async ()=>{
+  const errBox = document.getElementById('settingsError');
+  errBox.classList.remove('show');
+  const currentPass = document.getElementById('currentPass').value;
+  const ok = await ZB.verifyAdmin(admin.email, currentPass);
+  if(!ok){ errBox.textContent = 'Current password is incorrect.'; errBox.classList.add('show'); return; }
+
+  const newEmail = document.getElementById('email').value.trim() || admin.email;
+  const newPass = document.getElementById('newPass').value;
+  await ZB.setAdminPassword(newEmail, newPass || currentPass);
+  toast('Account updated');
+  document.getElementById('newPass').value = '';
+  document.getElementById('currentPass').value = '';
+});
+
+document.getElementById('logoutBtn').addEventListener('click', ()=>{
+  ZB.endSession();
+  window.location.href = 'login.html';
+});
+
+document.getElementById('wipeBtn').addEventListener('click', ()=>{
+  if(confirm('This will permanently delete ALL products, customers and orders. Type OK to confirm you understand this cannot be undone.')){
+    if(confirm('Are you absolutely sure? This is your last chance to cancel.')){
+      ZB.saveProducts([]); ZB.saveCustomers([]); ZB.saveBills([]);
+      toast('All shop data erased');
+    }
+  }
+});
+</script>
+</body>
+</html>
